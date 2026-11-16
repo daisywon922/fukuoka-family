@@ -3,7 +3,6 @@
   "name": "후쿠오카 여행",
   "short_name": "후쿠오카 여행",
   "lang": "ko",
-  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f1f5fa",

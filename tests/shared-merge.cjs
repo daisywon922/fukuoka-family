@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict');
+const {merge}=require('../shared-merge.js');
+const b={names:['a','b','c'],checks:{a:false,b:false},records:[{id:'1',text:'old',amount:10}],personalLists:{'member-1':[{id:'a',text:'passport',checked:false}]},deletedEventIds:[]};
+const copy=x=>JSON.parse(JSON.stringify(x));
+let l=copy(b),r=copy(b);l.checks.a=true;r.checks.b=true;assert.deepEqual(merge(b,l,r).checks,{a:true,b:true});
+l=copy(b);r=copy(b);l.records.push({id:'2',text:'meal'});r.records.push({id:'3',text:'bus'});assert.equal(merge(b,l,r).records.length,3);
+l=copy(b);r=copy(b);l.records[0].text='new';r.records[0].amount=20;assert.deepEqual(merge(b,l,r).records[0],{id:'1',text:'new',amount:20});
+l=copy(b);r=copy(b);l.records=[];r.checks.b=true;assert.equal(merge(b,l,r).records.length,0);
+l=copy(b);r=copy(b);l.deletedEventIds=['a'];r.deletedEventIds=['b'];assert.deepEqual(new Set(merge(b,l,r).deletedEventIds),new Set(['a','b']));
+l=copy(b);r=copy(b);l.names[0]='x';r.names[1]='y';assert.deepEqual(merge(b,l,r).names,['x','y','c']);
+l=copy(b);r=copy(b);l.personalLists['member-1'][0].checked=true;r.personalLists['member-2']=[{id:'b',text:'medicine',checked:true}];assert.equal(merge(b,l,r).personalLists['member-2'][0].checked,true);
+console.log('7 merge checks passed');
