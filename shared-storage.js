@@ -33,7 +33,7 @@
     const result=clone(state);
     result.commonChecklist=clone(commonItems());
     result.personalLists=Object.fromEntries(PROFILE_IDS.map(id=>[id,clone(personalItems(id))]));
-    result.eventOverrides=Object.fromEntries(TRIP.days.flatMap(day=>day.events.map(event=>[event.id,{date:day.date,event:clone(event)}])));
+    result.eventOverrides=Object.fromEntries(TRIP.days.flatMap(day=>day.events.map(event=>[event.id,{date:day.date,event:{...clone(event),time:event.time||''}}])));
     result.bookingOverrides=Object.fromEntries(bookingItems().map(item=>[item.id,clone(item)]));
     result.sharedCanonical=true;
     return result;
@@ -112,7 +112,8 @@
     seed.disabled=true;
     try{
       localStorage.setItem(KEY+'-before-shared',JSON.stringify(state));
-      const {error}=await client.from('family_trip').insert({owner_id:familyId,data:materialize()});
+      const initial=materialize();if(!valid(initial))throw new Error('공유할 기록의 형식 확인이 필요해요.');
+      const {error}=await client.from('family_trip').insert({owner_id:familyId,data:initial});
       if(error&&error.code!=='23505')throw error;
       await connect();dialog.close();toast('가족 공유를 시작했어요.');
     }catch(error){setStatus('설정 확인 필요','공유를 시작하지 못했어요. SQL 설정과 연결 상태를 확인해 주세요.');}

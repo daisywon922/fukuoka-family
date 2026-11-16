@@ -25,4 +25,5 @@
 ```sh
 node tests/shared-merge.cjs
 node tests/shared-storage.cjs
+node tests/shared-canonical.cjs
 ```
