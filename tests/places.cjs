@@ -1,0 +1,10 @@
+const assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs');
+const {merge}=require('../shared-merge.js');
+const place={id:'a',category:'맛집',name:'식당',map:'',note:'',favorite:false};
+let base={places:[place]},local=structuredClone(base),remote=structuredClone(base);
+local.places[0].favorite=true;remote.places[0].note='함께 갈 곳';
+assert.deepEqual(merge(base,local,remote).places[0],{...place,favorite:true,note:'함께 갈 곳'});
+const added=merge({}, {places:[place]}, {places:[{...place,id:'b'}]});assert.equal(added.places.length,2);
+const code=fs.readFileSync(require.resolve('../index.html'),'utf8').split('\n').find(line=>line.startsWith('function validPlaces('));
+const c=vm.createContext({});vm.runInContext(code,c);assert.equal(c.validPlaces(undefined),true);assert.equal(c.validPlaces([place]),true);assert.equal(c.validPlaces([{...place,name:' '}]),false);assert.equal(c.validPlaces([{...place,category:''}]),false);assert.equal(c.validPlaces([{...place,favorite:'yes'}]),false);assert.equal(c.validPlaces([place,place]),false);
+console.log('Place compatibility, required fields, favorites and concurrent additions passed');

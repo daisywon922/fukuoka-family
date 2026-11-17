@@ -1,5 +1,6 @@
 /* 공용 데이터 연결. 프로필 선택은 기존 기기 저장소에 유지합니다. */
 (async function(){
+  if(typeof LOCAL_PREVIEW!=='undefined'&&LOCAL_PREVIEW)return;
   const config=window.FUKUOKA_SHARED_CONFIG||{}, {merge,clone,same}=FamilyMerge;
   const enabled=Boolean(config.url&&config.publishableKey), OUTBOX=KEY+'-shared-outbox';
   let client,user,familyId,base=null,revision=0,ready=false,busy=false,queued=false,refreshNeeded=false;
@@ -40,7 +41,7 @@
   }
   function paint(){
     if(document.querySelector('dialog[open]')||document.activeElement?.matches('input,select,textarea,[contenteditable=true]')){refreshNeeded=true;return;}
-    refreshNeeded=false;applyScheduleEdits();renderBookings();renderNames();renderChecks();renderRecords();renderTimeline();renderMemos();
+    refreshNeeded=false;applyScheduleEdits();renderBookings();renderNames();renderChecks();renderRecords();renderTimeline();renderMemos();if(typeof renderPlaces==='function')renderPlaces();
   }
   document.addEventListener('close',()=>{if(refreshNeeded)setTimeout(paint,0)},true);
   document.addEventListener('focusout',()=>{if(refreshNeeded)setTimeout(paint,0)});

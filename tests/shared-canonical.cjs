@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const html=fs.readFileSync(require.resolve('../index.html'),'utf8');
-const validators=html.split('\n').filter(x=>/^function (validSchedulePatch|validScheduleState|validBookingState|validCommonList|validPersonalLists|valid)\(/.test(x)).join('\n');
+const validators=html.split('\n').filter(x=>/^function (validSchedulePatch|validScheduleState|validBookingState|validCommonList|validPersonalLists|validPlaces|valid)\(/.test(x)).join('\n');
 const storage=fs.readFileSync(require.resolve('../shared-storage.js'),'utf8');
 const materialize=storage.slice(storage.indexOf('  function materialize(){'),storage.indexOf('  function paint(){'));
 const state={names:['🌼','🐻','👸🏻'],memberNames:['one','two','three'],checks:{},records:[]};

@@ -4,6 +4,7 @@
   const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
   const object=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
   function merge(base,local,remote,key=''){
+    if(key==='places'&&base===undefined&&Array.isArray(local)&&Array.isArray(remote))base=[];
     if(same(base,local))return clone(remote);
     if(same(base,remote)||same(local,remote))return clone(local);
     if(Array.isArray(base)&&Array.isArray(local)&&Array.isArray(remote)){
@@ -11,7 +12,7 @@
         return [...new Set([...remote.filter(id=>!base.includes(id)||local.includes(id)),...local.filter(id=>!base.includes(id))])];
       }
       if(['names','memberNames'].includes(key))return local.map((value,i)=>merge(base[i],value,remote[i]));
-      if(['records','commonChecklist'].includes(key)||key.startsWith('member-')){
+      if(['records','commonChecklist','places'].includes(key)||key.startsWith('member-')){
         const result=[],b=new Map(base.map(x=>[x.id,x])),l=new Map(local.map(x=>[x.id,x])),r=new Map(remote.map(x=>[x.id,x]));
         // 이 기기에서 순서를 바꾼 경우 해당 순서를 우선하고 양쪽의 새 항목은 남깁니다.
         const order=same(base.map(x=>x.id),local.map(x=>x.id))?remote:local;
