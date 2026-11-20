@@ -2,6 +2,7 @@
 (()=>{
  const preview=typeof LOCAL_PREVIEW!=='undefined'&&LOCAL_PREVIEW;
  const key='fukuoka-notifications-preview',readKey='fukuoka-notifications-read';
+ const dismissedKey='fukuoka-notifications-dismissed'+(preview?'-preview':'');let dismissed=new Set();try{dismissed=new Set(JSON.parse(localStorage.getItem(dismissedKey)||'[]'))}catch{}
  let notices=[],enabled=false,loading=false,adminClient=null,pushRegistration=null;
  const connection=()=>window.FamilyConnection;
  const node=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text)n.textContent=text;return n};
@@ -64,8 +65,19 @@
   const seen=new Set(NoticeEvents.entries(previous).map(item=>item.key));
   save=function(){const result=originalSave();if(result===false)return result;for(const item of (previous.notificationImport!==state.notificationImport?(NoticeEvents.entries(state).forEach(x=>seen.add(x.key)),[]):NoticeEvents.added(previous,state,seen))){notices.unshift({...item,id:crypto.randomUUID(),created_at:new Date().toISOString()})}previous=clone(state);localStorage.setItem(key,JSON.stringify(notices));render();return result};
  }
+ function attachDismiss(row,id,track){
+ let start=null,dx=0,swiping=false,suppress=false,ready=false,pulsed=false;
+ const threshold=()=>Math.max(90,row.clientWidth*.5);
+ const reset=()=>{row.style.transform='';row.classList.remove('is-swiping');track.classList.remove('delete-ready');start=null;swiping=false;ready=false};
+ row.style.touchAction='pan-y';
+ row.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;start={x:e.clientX,y:e.clientY};dx=0;suppress=false;pulsed=false});
+ row.addEventListener('pointermove',e=>{if(!start)return;dx=Math.min(0,e.clientX-start.x);const dy=e.clientY-start.y;if(!swiping&&Math.abs(dy)>12&&Math.abs(dy)>Math.abs(dx)){reset();return}if(!swiping&&dx<-10&&Math.abs(dx)>Math.abs(dy)*1.3){swiping=true;row.setPointerCapture(e.pointerId);row.classList.add('is-swiping')}if(swiping){suppress=true;row.style.transform='translateX('+dx+'px)';ready=-dx>=threshold();track.classList.toggle('delete-ready',ready);if(ready&&!pulsed){pulsed=true;if(typeof navigator.vibrate==='function')navigator.vibrate(12)}}});
+ row.addEventListener('pointerup',()=>{if(swiping&&ready){try{dismissed.add(id);localStorage.setItem(dismissedKey,JSON.stringify([...dismissed]));row.classList.remove('is-swiping');row.style.transform='translateX(-110%)';setTimeout(()=>{render();toast('알림이 삭제되었어요.')},180)}catch{dismissed.delete(id);reset();toast('알림을 삭제하지 못했어요.')}}else reset();start=null});
+ row.addEventListener('pointercancel',reset);
+ row.addEventListener('click',e=>{if(suppress){e.preventDefault();e.stopImmediatePropagation();suppress=false}},true);
+ }
  function render(){
- renderTabs();const list=$n('notification-list');observer.disconnect();list.replaceChildren();const visible=notices.filter(notice=>noticeFilter==='all'||noticeKind(notice)===noticeFilter);
+ renderTabs();const list=$n('notification-list');observer.disconnect();list.replaceChildren();const visible=notices.filter(notice=>!dismissed.has(notice.id)).filter(notice=>noticeFilter==='all'||noticeKind(notice)===noticeFilter);
  const off=$n('notification-disabled');off.replaceChildren();off.hidden=enabled||loading;
  off.className='notification-disabled'+(!notices.length?' notification-disabled-empty':'');
  if(!off.hidden){
@@ -77,11 +89,11 @@
  const target=targetNames[notice.target]?notice.target:null,b=node(target?'button':'article','notification-item'+(!read.has(notice.id)?' unread':'')),date=node('time','notification-card-date',noticeDate(notice.created_at));date.dateTime=notice.created_at;const meta=node('div','notification-meta');meta.append(date);b.append(meta,node('strong','',notice.title),node('p','',notice.body));
  b.dataset.noticeId=notice.id;
  if(target){meta.append(node('span','notification-destination','자세히 보기 ›'));b.onclick=()=>{historyDialog.close();navigateNotice(target,notice.target_detail)}}
- list.append(b);observer.observe(b)
+ const track=node('div','notification-swipe'),background=node('div','notification-delete-background');background.setAttribute('aria-hidden','true');background.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6"/></svg>';track.append(background,b);list.append(track);observer.observe(b);attachDismiss(b,notice.id,track)
  }
 
  if(!visible.length&&(enabled||loading||notices.length))list.append(node('p','empty',loading?'불러오는 중…':'아직 받은 알림이 없습니다.'));
- $n('notification-dot').hidden=!notices.some(n=>!read.has(n.id));$n('notification-write').hidden=!isAdmin()
+ $n('notification-dot').hidden=!notices.some(n=>!dismissed.has(n.id)&&!read.has(n.id));$n('notification-write').hidden=!isAdmin()
  }
 
  async function refresh(){if(preview){notices=notices.filter(n=>Date.parse(n.created_at)>=Date.now()-90*86400000);render();return}if(!connection()){$n('notification-status').textContent='가족 공유 연결을 기다리고 있습니다.';render();return}loading=true;render();const {data,error}=await connection().client.from('family_notices').select('id,title,body,created_at,target,target_detail,source').eq('family_id',connection().familyId).gte('created_at',new Date(Date.now()-90*86400000).toISOString()).order('created_at',{ascending:false}).limit(100);loading=false;if(error)$n('notification-status').textContent='알림 저장소 설정 후 알림 이력을 확인할 수 있습니다.';else{notices=data;$n('notification-status').textContent=''}render()}
