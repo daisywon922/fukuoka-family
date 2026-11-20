@@ -2,7 +2,7 @@
 (()=>{
  const preview=typeof LOCAL_PREVIEW!=='undefined'&&LOCAL_PREVIEW;
  const key='fukuoka-notifications-preview',readKey='fukuoka-notifications-read';
- let notices=[],enabled=false,loading=false,adminClient=null;
+ let notices=[],enabled=false,loading=false,adminClient=null,pushRegistration=null;
  const connection=()=>window.FamilyConnection;
  const node=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text)n.textContent=text;return n};
  const gear='<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13a7 7 0 0 0-14 0c0 8-3 8-3 11h20c0-2-2-3-2-6M10 27a3 3 0 0 0 6 0M11 5V3h4v2"/><g transform="translate(18 1)"><path d="m5 1 1-1 2 1 1 2 2 1v3l-2 1-1 2H5L4 8 2 7V4l2-1Z" fill="var(--surface)"/><circle cx="6.5" cy="5.5" r="2"/></g></svg>';
@@ -86,7 +86,7 @@
 
  async function refresh(){if(preview){render();return}if(!connection()){$n('notification-status').textContent='가족 공유 연결을 기다리고 있습니다.';render();return}loading=true;render();const {data,error}=await connection().client.from('family_notices').select('id,title,body,created_at,target,target_detail,source').eq('family_id',connection().familyId).order('created_at',{ascending:false}).limit(100);loading=false;if(error)$n('notification-status').textContent='알림 저장소 설정 후 알림 이력을 확인할 수 있습니다.';else{notices=data;$n('notification-status').textContent=''}render()}
  $n('notification-open').onclick=()=>{historyDialog.showModal();void updateSettings();void refresh()};
- async function openSettings(){if($n('menu-dialog').open)$n('menu-dialog').close();settingsDialog.showModal();await updateSettings()}
+ async function openSettings(){if($n('menu-dialog').open)$n('menu-dialog').close();settingsDialog.showModal();await updateSettings();if(!preview&&'serviceWorker'in navigator&&'PushManager'in window){try{pushRegistration=await registration()}catch{}}}
  $n('notification-settings-menu').onclick=openSettings;
  async function registration(){await navigator.serviceWorker.register('./push-worker.js',{scope:'./'});return navigator.serviceWorker.ready}
  async function updateSettings(){
@@ -97,7 +97,31 @@
  $n('notification-toggle').setAttribute('aria-checked',String(enabled));renderPreferences();render()
  }
 
- async function changePush(){const b=$n('notification-toggle');b.disabled=true;try{if(preview){localStorage.setItem(key+'-enabled',String(!enabled));await updateSettings();return}if(!connection())throw Error('가족 공유 연결 후 다시 시도해주세요.');const publicKey=window.FUKUOKA_PUSH_CONFIG?.publicKey;if(!publicKey)throw Error('서버 알림 설정을 먼저 연결해야 합니다.');if(!('PushManager'in window))throw Error('이 기기는 웹 알림을 지원하지 않습니다. 홈 화면 앱에서 다시 확인해주세요.');if(!enabled&&await Notification.requestPermission()!=='granted')throw Error('알림 허용을 선택해주세요.');const r=await registration();let sub=await r.pushManager.getSubscription();if(enabled&&sub){const {error}=await connection().client.from('family_push_subscriptions').delete().eq('endpoint',sub.endpoint);if(error)throw error;await sub.unsubscribe()}else{if(await Notification.requestPermission()!=='granted')throw Error('알림 허용을 선택해주세요.');const bytes=Uint8Array.from(atob(publicKey.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));sub=sub||await r.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytes});const session=await connection().client.auth.getUser();const {error}=await connection().client.from('family_push_subscriptions').upsert({user_id:session.data.user.id,family_id:connection().familyId,endpoint:sub.endpoint,subscription:sub.toJSON(),preferences},{onConflict:'user_id,endpoint'});if(error){await sub.unsubscribe();throw error}}await updateSettings()}catch(e){$n('notification-device').hidden=false;$n('notification-device').textContent=e.message||'알림 설정을 저장하지 못했습니다.'}finally{b.disabled=false}}
+ async function changePush(){
+ const b=$n('notification-toggle');b.disabled=true;let stage='permission';
+ try{
+ if(preview){localStorage.setItem(key+'-enabled',String(!enabled));await updateSettings();return}
+ if(!connection())throw Error('가족 공유 연결을 확인해주세요.');
+ const publicKey=window.FUKUOKA_PUSH_CONFIG?.publicKey;if(!publicKey)throw Error('서버 알림 설정을 먼저 연결해야 합니다.');
+ if(!('PushManager'in window)||!('serviceWorker'in navigator))throw Error('홈 화면에 추가한 앱에서 다시 시도해주세요.');
+ if(!pushRegistration){pushRegistration=await registration();throw Error('알림 준비가 끝났어요. 앱 푸시를 한 번 더 눌러주세요.')}
+ let sub;
+ if(enabled){
+ stage='save';sub=await pushRegistration.pushManager.getSubscription();if(sub){const {error}=await connection().client.from('family_push_subscriptions').delete().eq('endpoint',sub.endpoint);if(error)throw error;await sub.unsubscribe()}
+ }else{
+ // Subscribe is the first async operation: iOS receives the original tap gesture.
+ const bytes=Uint8Array.from(atob(publicKey.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));
+ sub=await pushRegistration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytes});
+ stage='save';const session=await connection().client.auth.getUser();if(session.error||!session.data.user)throw Error('가족 공유 연결을 확인해주세요.');
+ const {error}=await connection().client.from('family_push_subscriptions').upsert({user_id:session.data.user.id,family_id:connection().familyId,endpoint:sub.endpoint,subscription:sub.toJSON(),preferences},{onConflict:'user_id,endpoint'});if(error)throw error;
+ }
+ await updateSettings();
+ }catch(e){
+ $n('notification-device').hidden=false;
+ $n('notification-device').textContent=stage==='save'?'알림 권한은 허용됐지만 서버에 기기를 등록하지 못했어요. 다시 켜주세요. ('+(e.code||e.message||'연결 오류')+')':e.name==='NotAllowedError'?'알림 권한을 확인해주세요. 아이폰 설정 → 알림 → 후쿠오카 여행에서 알림 허용을 켠 뒤 앱을 다시 열어주세요.':e.message||'알림을 켜지 못했어요. 다시 시도해주세요.';
+ }finally{b.disabled=false}
+ }
+
  const offConfirm=dialog('notification-off-confirm','알림을 끄시겠어요?','<p>알림을 끄면 주요 알림을 받을 수 없어요. 그래도 끄시겠어요?</p><div class="actions"><button id="notification-off-cancel">취소</button><button id="notification-off-yes" class="primary">끄기</button></div>');
  $n('notification-toggle').onclick=()=>{if(enabled)offConfirm.showModal();else void changePush()};
  $n('notification-off-cancel').onclick=()=>offConfirm.close();

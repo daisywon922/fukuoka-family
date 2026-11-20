@@ -138,8 +138,8 @@ document.addEventListener('pointerdown',()=>document.documentElement.classList.r
 <dialog id="schedule-delete-dialog" aria-labelledby="schedule-delete-title"><div class="titleline"><h2 id="schedule-delete-title">일정 삭제</h2><button id="schedule-delete-close" class="close-icon" aria-label="일정 삭제 닫기">×</button></div><p id="schedule-delete-text"></p><p id="schedule-delete-note" class="help"></p><div class="actions"><button id="schedule-delete-confirm" class="danger-button">일정 삭제</button></div></dialog>
 <dialog id="schedule-time-dialog" aria-labelledby="schedule-time-title"><div class="titleline"><h2 id="schedule-time-title">시간 선택</h2><button type="button" class="close-icon" data-close="schedule-time-dialog" aria-label="시간 선택 닫기">×</button></div><div class="time-wheel-labels" aria-hidden="true"><span>오전·오후</span><span>시</span><span>분</span></div><div class="time-wheel"><div class="time-wheel-selection" aria-hidden="true"></div><div id="time-wheel-period" class="time-wheel-column" role="listbox" aria-label="오전 오후 선택" tabindex="0"></div><div id="time-wheel-hour" class="time-wheel-column" role="listbox" aria-label="시 선택" tabindex="0"></div><div id="time-wheel-minute" class="time-wheel-column" role="listbox" aria-label="분 선택" tabindex="0"></div></div><div class="actions"><button type="button" id="schedule-time-apply" class="primary">확인</button></div></dialog>
 <dialog id="memo-detail-dialog" aria-labelledby="memo-detail-title"><div class="titleline"><h2 id="memo-detail-title">메모 상세</h2><button class="close-icon" data-close="memo-detail-dialog" aria-label="메모 상세 닫기">×</button></div><small id="memo-detail-date"></small><p id="memo-detail-text"></p><div class="actions"><button id="memo-detail-delete" class="danger-button">삭제</button><button id="memo-detail-edit" class="primary">수정</button></div></dialog><dialog id="memo-delete-dialog" aria-labelledby="memo-delete-title"><div class="titleline"><h2 id="memo-delete-title">삭제하시겠습니까?</h2><button class="close-icon" data-close="memo-delete-dialog" aria-label="메모 삭제 확인 닫기">×</button></div><div class="actions"><button data-close="memo-delete-dialog">취소</button><button id="memo-delete-confirm" class="danger-button">삭제</button></div></dialog><dialog id="personal-editor" aria-labelledby="personal-title"><div class="titleline"><h2 id="personal-title">개인 체크리스트 수정</h2><button class="close-icon" data-close="personal-editor" aria-label="개인 체크리스트 수정 닫기">×</button></div><form id="personal-form"><p class="checklist-fields-label">준비 항목</p><div id="personal-edit-list"></div><button id="personal-add" type="button" class="inline">+ 항목 추가</button><div class="actions"><button id="personal-save" class="primary" disabled>저장</button></div></form></dialog><dialog id="checklist-delete-dialog" aria-labelledby="checklist-delete-title"><div class="titleline"><h2 id="checklist-delete-title">항목 삭제</h2><button class="close-icon" data-close="checklist-delete-dialog" aria-label="항목 삭제 닫기">×</button></div><p id="checklist-delete-message"></p><div class="actions"><button data-close="checklist-delete-dialog">취소</button><button id="checklist-delete-confirm" class="danger-button">삭제</button></div></dialog><div id="toast" role="status" hidden></div>
-<script src="./checklist-tree.js?v=1.5.0"></script>
-<script src="./checklist-defaults.js?v=1.5.0"></script>
+<script src="./checklist-tree.js?v=1.5.1"></script>
+<script src="./checklist-defaults.js?v=1.5.1"></script>
 <script>
 // 공통 일정은 고정 ID를 유지하며 추가·수정하세요. 개인 기록은 별도 저장합니다.
 const REAL_TRIP={start:'2027-03-10',end:'2027-03-13',days:[
@@ -471,14 +471,14 @@ function startSplash(){const splash=$('app-splash'),plane=splash.querySelector('
 
 migrateMemoAuthors();renderNames();renderChecks();renderRecords();renderMemos();if(!loadError)save();if(!currentProfileId)openProfiles();if(loadError)toast(loadError==='migrated'?'이전 메모를 가져왔어요. 날짜를 확인해 주세요.':'이전 기록을 읽지 못했어요. 원본 저장 데이터는 보존했습니다.');
 </script>
-<script src="./releases.js?v=1.5.0"></script>
-<script src="./form-labels.js?v=1.5.0"></script>
-<script src="./time-picker.js?v=1.5.0"></script>
-<script src="./places.js?v=1.5.0"></script>
-<script src="./shared-config.js?v=1.5.0"></script>
-<script src="./shared-merge.js?v=1.5.0"></script>
-<script src="./shared-storage.js?v=1.5.0"></script>
+<script src="./releases.js?v=1.5.1"></script>
+<script src="./form-labels.js?v=1.5.1"></script>
+<script src="./time-picker.js?v=1.5.1"></script>
+<script src="./places.js?v=1.5.1"></script>
+<script src="./shared-config.js?v=1.5.1"></script>
+<script src="./shared-merge.js?v=1.5.1"></script>
+<script src="./shared-storage.js?v=1.5.1"></script>
 <script src="./push-config.js"></script>
 <script src="./notification-events.js"></script>
-<script src="./notifications.js"></script>
+<script src="./notifications.js?v=1.5.1"></script>
 </body></html>
