@@ -1,0 +1,7 @@
+[functions.send-family-notice]
+# The function validates the user JWT with auth.getUser before any access.
+verify_jwt = false
+
+[functions.dispatch-added-notice]
+# This endpoint verifies a separate private webhook secret.
+verify_jwt = false

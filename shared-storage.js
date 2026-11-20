@@ -103,7 +103,7 @@
     seed.hidden=true;
     let pending=null;try{pending=JSON.parse(localStorage.getItem(OUTBOX));}catch(error){}
     // 다른 기기의 첫 접속은 기존 서버 기록을 우선합니다.
-    accept(row,pending?.owner===familyId?pending.base:null);ready=true;lock(false);
+    accept(row,pending?.owner===familyId?pending.base:null);ready=true;lock(false);window.FamilyConnection={client,familyId};window.dispatchEvent?.(new Event("family-connected"));
     if(!currentProfileId)dialog.addEventListener('close',()=>openProfiles(),{once:true});
     if(channel)await client.removeChannel(channel);
     channel=client.channel('family-trip-'+familyId).on('postgres_changes',{event:'*',schema:'public',table:'family_trip',filter:'owner_id=eq.'+familyId},()=>void sync()).subscribe();
