@@ -100,6 +100,27 @@
  $n('notification-open').onclick=()=>{historyDialog.showModal();void updateSettings();void refresh()};
  async function openSettings(){if($n('menu-dialog').open)$n('menu-dialog').close();settingsDialog.showModal();await updateSettings();if(!preview&&'serviceWorker'in navigator&&'PushManager'in window){try{pushRegistration=await registration()}catch{}}}
  $n('notification-settings-menu').onclick=openSettings;
+ const pushPromptKey='fukuoka-push-intro-seen'+(preview?'-preview':'');let promptingPush=false;
+ async function maybePromptPush(){
+ if(preview||promptingPush||document.hidden||!currentProfileId||!connection()||localStorage.getItem(pushPromptKey)||document.querySelector('dialog[open]')||document.activeElement?.matches('input,textarea,select,[contenteditable=true]'))return;
+ const latest=APP_RELEASES.find(r=>!r.pending);if(latest&&localStorage.getItem('fukuoka-release-seen')!==latest.version)return;
+ promptingPush=true;
+ try{
+ let active=false;
+ if('serviceWorker'in navigator&&'PushManager'in window&&typeof Notification!=='undefined'){const r=await navigator.serviceWorker.getRegistration();active=!!(await r?.pushManager.getSubscription())&&Notification.permission==='granted'}
+ if(active||document.hidden||document.querySelector('dialog[open]'))return;
+ const d=dialog('notification-push-intro','중요한 알림을 받아보세요','<p class="push-intro-copy">일정·지출·메모가 추가되면 바로 알려드려요.</p><div class="actions"><button id="push-intro-later">나중에</button><button id="push-intro-enable" class="primary">알림 켜기</button></div>');
+ d.addEventListener('close',()=>{d.remove();promptingPush=false},{once:true});
+ document.getElementById('push-intro-later').onclick=()=>d.close();
+ document.getElementById('push-intro-enable').onclick=()=>{d.close();void openSettings()};
+ localStorage.setItem(pushPromptKey,'true');d.showModal();
+ }catch{}finally{if(!document.getElementById('notification-push-intro')?.open)promptingPush=false}
+ }
+ document.addEventListener('close',()=>setTimeout(()=>void maybePromptPush(),0),true);
+ window.addEventListener('family-connected',()=>setTimeout(()=>void maybePromptPush(),0));
+ window.addEventListener('pageshow',()=>setTimeout(()=>void maybePromptPush(),0));
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)void maybePromptPush()});
+ setTimeout(()=>void maybePromptPush(),1800);
  async function registration(){await navigator.serviceWorker.register('./push-worker.js',{scope:'./'});return navigator.serviceWorker.ready}
  async function updateSettings(){
  $n('notification-device').hidden=true;$n('notification-device').textContent='';
