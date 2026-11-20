@@ -51,7 +51,8 @@
   }
   function accept(row,localBase=base){
     if(!row||!valid(row.data))throw new Error('저장된 데이터 형식을 확인해 주세요.');
-    const next=localBase?merge(localBase,state,row.data):clone(row.data);
+    let next=localBase?merge(localBase,state,row.data):clone(row.data);
+    if(typeof PersonalChecklistDefaults!=='undefined')next=PersonalChecklistDefaults.apply(next);
     if(!valid(next))throw new Error('기록을 합치는 중 확인이 필요해요.');
     const changed=!same(state,next);state=next;base=clone(row.data);revision=row.revision;
     localStorage.setItem(KEY,JSON.stringify(state));

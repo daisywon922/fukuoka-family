@@ -4,7 +4,7 @@ const validators=html.split('\n').filter(x=>/^function (validSchedulePatch|valid
 const storage=fs.readFileSync(require.resolve('../shared-storage.js'),'utf8');
 const materialize=storage.slice(storage.indexOf('  function materialize(){'),storage.indexOf('  function paint(){'));
 const state={names:['🌼','🐻','👸🏻'],memberNames:['one','two','three'],checks:{},records:[]};
-const c=vm.createContext({state,clone:structuredClone,TRIP:{days:[{date:'2027-03-11',events:[{id:'tour',title:'버스투어',activity:'버스투어 집합',notes:''}]}]},PROFILE_IDS:['member-1','member-2','member-3'],personalItems:()=>[{id:'passport',text:'여권',checked:false}],commonItems:()=>[{id:'insurance',text:'여행자보험'}],bookingItems:()=>[{id:'hotel',title:'호텔',period:'3박',status:'complete',details:[['결제금액','677,181원']]}]});
+const c=vm.createContext({PersonalChecklist:require('../checklist-tree.js'),state,clone:structuredClone,TRIP:{days:[{date:'2027-03-11',events:[{id:'tour',title:'버스투어',activity:'버스투어 집합',notes:''}]}]},PROFILE_IDS:['member-1','member-2','member-3'],personalItems:()=>[{id:'passport',text:'여권',checked:false}],commonItems:()=>[{id:'insurance',text:'여행자보험'}],bookingItems:()=>[{id:'hotel',title:'호텔',period:'3박',status:'complete',details:[['결제금액','677,181원']]}]});
 vm.runInContext(validators+'\n'+materialize,c);
 assert.equal(vm.runInContext('valid(materialize())',c),true);
 assert.equal(vm.runInContext("materialize().eventOverrides.tour.event.time",c),'');

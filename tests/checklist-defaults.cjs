@@ -1,0 +1,6 @@
+const assert=require('node:assert/strict'),tree=require('../checklist-tree.js'),defaults=require('../checklist-defaults.js');
+for(const [name,count] of [['원예은',23],['안인숙',22],['오성섭',16]]){const list=defaults.build(name);assert.equal(tree.validate(list),true);assert.deepEqual(list.map(x=>x.text),['필수품','세안도구','화장품','옷']);assert.equal(tree.progress(list).total,count);const names=list.flatMap(x=>x.children.map(x=>x.text));assert.equal(names.includes('렌즈/렌즈보존액'),name==='원예은');assert.equal(names.includes('애플워치 충전기'),name!=='오성섭');assert.equal(names.includes('파운데이션'),name!=='오성섭')}
+const state={memberNames:['원예은','오성섭','안인숙'],personalLists:{'member-1':[{id:'old-passport',text:'여권',checked:true},{id:'custom',text:'나만의 준비물',checked:false}]}};
+const next=defaults.apply(state);assert.notEqual(next,state);assert.equal(next.personalLists['member-1'][0].children[0].checked,true);assert.equal(next.personalLists['member-1'][0].children[0].id,'old-passport');assert.equal(next.personalLists['member-1'].at(-1).text,'나만의 준비물');assert.equal(state.personalLists['member-1'].length,2);assert.equal(defaults.apply(next),next);
+next.personalLists['member-1'][0].children.pop();assert.equal(defaults.apply(next).personalLists['member-1'][0].children.length,11);
+console.log('Exact member-specific lists (23/22/16), checked/custom item preservation and one-time defaults passed');

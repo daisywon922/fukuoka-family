@@ -97,3 +97,12 @@ if(LOCAL_PREVIEW){
   if(!currentProfileId){currentProfileId=PROFILE_IDS[0];renderNames();renderChecks();$('profile-dialog').close();}go('places');
 }
 renderPlaces();
+
+if(LOCAL_PREVIEW&&new URLSearchParams(location.search).get('section')==='personal'){
+  if(state.personalDefaultPreviewRevision!==PersonalChecklistDefaults.revision){
+    state.memberNames=['원예은','오성섭','안인숙'];
+    state.personalLists=Object.fromEntries(PROFILE_IDS.map((id,index)=>[id,PersonalChecklistDefaults.build(state.memberNames[index])]));
+    state.personalDefaultPreviewRevision=PersonalChecklistDefaults.revision;save();renderNames();
+  }
+  renderChecks();go('prepare');selectChecklistTab('personal');
+}
