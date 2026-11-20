@@ -60,3 +60,5 @@
 #notification-detail-settings .notification-preference-copy>span{font-size:14px;font-weight:500;line-height:1.5}
 #notification-detail-settings .notification-preference-copy>p{font-size:12px;line-height:1.6;margin:3px 0 0;color:#8491a2}
 #notification-detail-settings .notification-toggle{flex:0 0 46px}
+
+.notification-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}.notification-list .notification-meta .notification-card-date{margin:0;min-width:0}.notification-list .notification-meta .notification-destination{margin:0;font-size:10px;white-space:nowrap;flex-shrink:0}.notification-retention{flex-shrink:0;font-size:11px;color:#8491a2;line-height:1.6;margin:0;padding:10px 0 12px}.release-notice{height:auto;max-width:420px}.release-notice ul{padding-left:19px;font-size:13px;line-height:1.8;margin:16px 0}.release-notice li+li{margin-top:7px}.release-notice .actions{justify-content:flex-end}
