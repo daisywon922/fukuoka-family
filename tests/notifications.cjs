@@ -4,7 +4,7 @@ const scope='https://example.org/fukuoka-family/';
 const self={registration:{scope,showNotification:async(...args)=>shown.push(args)},clients:{matchAll:async()=>[],openWindow:async url=>opened.push(url)},addEventListener:(name,fn)=>handlers[name]=fn};
 vm.runInNewContext(fs.readFileSync('push-worker.js','utf8'),{self,URL});
 (async()=>{let task;
-for(const target of ['schedule','places','overview','records','prepare','memos',null,'https://malicious.example/']){
+for(const target of ['schedule','places','overview','records','prepare','memos','info',null,'https://malicious.example/']){
  handlers.push({data:{json:()=>({id:'test',title:'여행 알림',body:'호텔에서 만나요',target,target_detail:'booking:hotel'})},waitUntil:p=>task=p});await task;
  const notification=shown.at(-1);assert.equal(notification[0],'여행 알림');assert.equal(notification[1].body,'호텔에서 만나요');
  handlers.notificationclick({notification:{data:notification[1].data,close(){}},waitUntil:p=>task=p});await task;

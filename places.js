@@ -37,7 +37,7 @@ function showSchedulePlaces(query=''){
   const needle=query.trim().toLocaleLowerCase();
   const items=[...(state.places||[])].filter(item=>!needle||item.name.toLocaleLowerCase().includes(needle)||item.category.includes(needle)).sort((a,b)=>Number(b.favorite===true)-Number(a.favorite===true));
   items.forEach((item,index)=>{
-    const option=el('button','schedule-place-option');option.type='button';option.id='schedule-place-choice-'+index;option.setAttribute('role','option');option.setAttribute('aria-selected','false');option.append(el('span','',item.name),el('small','',item.category));option.onpointerdown=event=>event.preventDefault();option.onclick=()=>selectSchedulePlace(item.id);list.append(option);
+    const option=el('button','schedule-place-option');option.type='button';option.id='schedule-place-choice-'+index;option.setAttribute('role','option');option.setAttribute('aria-selected','false');option.append(el('span','',item.name),el('small','',item.category));let touchStart=null;option.onpointerdown=event=>{event.preventDefault();touchStart=event.pointerType==='touch'?{x:event.clientX,y:event.clientY}:null};option.onpointercancel=()=>{touchStart=null};option.onpointerup=event=>{if(touchStart&&Math.hypot(event.clientX-touchStart.x,event.clientY-touchStart.y)<12){event.preventDefault();selectSchedulePlace(item.id)}touchStart=null};option.onclick=()=>selectSchedulePlace(item.id);list.append(option);
   });
   if(!items.length){closeSchedulePlaces();return;}
   list.hidden=false;$('schedule-place').setAttribute('aria-expanded','true');$('schedule-place-toggle').setAttribute('aria-expanded','true');$('schedule-place').removeAttribute('aria-activedescendant');

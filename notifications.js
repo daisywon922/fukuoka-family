@@ -20,16 +20,16 @@
  function noticeKind(notice){return notice.kind||(notice.source==='automatic'?({schedule:'schedule',records:'expense',memos:'memo'}[notice.target]||'manual'):'manual')}
  function renderTabs(){const tabs=$n('notification-tabs');tabs.replaceChildren();for(const [value,label]of Object.entries(noticeTabs)){const b=node('button',noticeFilter===value?'active':'',label);b.type='button';b.setAttribute('aria-pressed',String(noticeFilter===value));b.onclick=()=>{noticeFilter=value;render()};tabs.append(b)}}
  const preferenceKey='fukuoka-notice-preferences';
- let preferences={schedule:true,expense:true,memo:true};try{const stored=JSON.parse(localStorage.getItem(preferenceKey)||'{}');for(const kind of Object.keys(preferences))if(typeof stored[kind]==='boolean')preferences[kind]=stored[kind]}catch{}
- const preferenceLabels={schedule:'새로운 일정 추가',expense:'새로운 지출 등록',memo:'새로운 메모 등록'};
+ let preferences={schedule:true,expense:true,memo:true,update:true};try{const stored=JSON.parse(localStorage.getItem(preferenceKey)||'{}');for(const kind of Object.keys(preferences))if(typeof stored[kind]==='boolean')preferences[kind]=stored[kind]}catch{}
+ const preferenceLabels={schedule:'새로운 일정 추가',expense:'새로운 지출 등록',memo:'새로운 메모 등록',update:'신규 업데이트 알림'};
  function renderPreferences(){
  $n('notification-detail-settings').hidden=false;$n('notification-detail-settings').classList.toggle('is-disabled',!enabled);const list=$n('notification-detail-toggles');list.replaceChildren();
- for(const [kind,label]of Object.entries(preferenceLabels)){const row=node('div','notification-setting-row'),toggle=node('button','notification-toggle');toggle.type='button';toggle.setAttribute('role','switch');toggle.setAttribute('aria-label',label);toggle.setAttribute('aria-checked',String(enabled&&preferences[kind]));toggle.disabled=!enabled;const text=node('div','notification-preference-copy');text.append(node('span','',label),node('p','',({schedule:'새 일정이 추가되면 알려드립니다.',expense:'새 지출내역이 등록되면 알려드립니다.',memo:'새 메모가 등록되면 알려드립니다.'})[kind]));row.append(text,toggle);list.append(row);toggle.onclick=async()=>{toggle.disabled=true;const next={...preferences,[kind]:!preferences[kind]};try{if(!preview){const r=await navigator.serviceWorker.getRegistration(),sub=await r?.pushManager.getSubscription();if(!sub||!connection())throw Error('알림 연결을 확인해주세요.');const {error}=await connection().client.from('family_push_subscriptions').update({preferences:next}).eq('endpoint',sub.endpoint);if(error)throw error}preferences=next;localStorage.setItem(preferenceKey,JSON.stringify(preferences));renderPreferences()}catch{toast('알림 설정을 저장하지 못했어요.');toggle.disabled=false}}}
+ for(const [kind,label]of Object.entries(preferenceLabels)){const row=node('div','notification-setting-row'),toggle=node('button','notification-toggle');toggle.type='button';toggle.setAttribute('role','switch');toggle.setAttribute('aria-label',label);toggle.setAttribute('aria-checked',String(enabled&&preferences[kind]));toggle.disabled=!enabled;const text=node('div','notification-preference-copy');text.append(node('span','',label),node('p','',({schedule:'새 일정이 추가되면 알려드립니다.',expense:'새 지출내역이 등록되면 알려드립니다.',memo:'새 메모가 등록되면 알려드립니다.',update:'새 버전이 배포되면 알려드립니다.'})[kind]));row.append(text,toggle);list.append(row);toggle.onclick=async()=>{toggle.disabled=true;const next={...preferences,[kind]:!preferences[kind]};try{if(!preview){const r=await navigator.serviceWorker.getRegistration(),sub=await r?.pushManager.getSubscription();if(!sub||!connection())throw Error('알림 연결을 확인해주세요.');const {error}=await connection().client.from('family_push_subscriptions').update({preferences:next}).eq('endpoint',sub.endpoint);if(error)throw error}preferences=next;localStorage.setItem(preferenceKey,JSON.stringify(preferences));renderPreferences()}catch{toast('알림 설정을 저장하지 못했어요.');toggle.disabled=false}}}
  }
  let read=new Set();try{read=new Set(JSON.parse(localStorage.getItem(readKey)||'[]'))}catch{}
  const incomingRead=new URLSearchParams(location.search).get('readNotice');if(incomingRead){read.add(incomingRead);localStorage.setItem(readKey,JSON.stringify([...read]))}
  if(preview){try{notices=JSON.parse(localStorage.getItem(key)||'null')||[]}catch{}if(new URLSearchParams(location.search).get('notices')==='empty')notices=[];else if(!notices.length)notices=[{id:'sample-1',title:'출발 전 준비 확인',body:'여권과 예약 바우처를 챙겨주세요. 개인 체크리스트도 확인해주세요.',created_at:new Date().toISOString()},{id:'sample-2',title:'후쿠오카 여행 알림',body:'여행 중 함께 확인할 내용은 이곳에 모아둘게요.',created_at:new Date(Date.now()-86400000).toISOString()}];$n('notification-preview').hidden=false}
- const targetNames={schedule:'일정',places:'장소',overview:'예약현황',records:'지출내역',prepare:'체크리스트',memos:'여행 메모'};
+ const targetNames={schedule:'일정',places:'장소',overview:'예약현황',records:'지출내역',prepare:'체크리스트',memos:'여행 메모',info:'정보'};
  // Mark cards read only once they have actually been visible in the history viewport.
  const visibleNotices=new Set();
  const observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting)visibleNotices.add(entry.target.dataset.noticeId)},{root:$n('notification-list').parentElement,threshold:0.5});
@@ -98,7 +98,7 @@
 
  async function refresh(){if(preview){notices=notices.filter(n=>Date.parse(n.created_at)>=Date.now()-90*86400000);render();return}if(!connection()){$n('notification-status').textContent='가족 공유 연결을 기다리고 있습니다.';render();return}loading=true;render();const {data,error}=await connection().client.from('family_notices').select('id,title,body,created_at,target,target_detail,source').eq('family_id',connection().familyId).gte('created_at',new Date(Date.now()-90*86400000).toISOString()).order('created_at',{ascending:false}).limit(100);loading=false;if(error)$n('notification-status').textContent='알림 저장소 설정 후 알림 이력을 확인할 수 있습니다.';else{notices=data;$n('notification-status').textContent=''}render()}
  $n('notification-open').onclick=()=>{historyDialog.showModal();void updateSettings();void refresh()};
- async function openSettings(){if($n('menu-dialog').open)$n('menu-dialog').close();settingsDialog.showModal();await updateSettings();if(!preview&&'serviceWorker'in navigator&&'PushManager'in window){try{pushRegistration=await registration()}catch{}}}
+ async function openSettings(){if($n('menu-dialog').open)$n('menu-dialog').close();settingsDialog.showModal();await updateSettings();if(!preview&&'serviceWorker'in navigator&&'PushManager'in window){try{pushRegistration=await registration()}catch(error){pushProgress(error.message)}}}
  $n('notification-settings-menu').onclick=openSettings;
  const pushPromptKey='fukuoka-push-intro-seen'+(preview?'-preview':'');let promptingPush=false;
  async function maybePromptPush(){
@@ -121,7 +121,9 @@
  window.addEventListener('pageshow',()=>setTimeout(()=>void maybePromptPush(),0));
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)void maybePromptPush()});
  setTimeout(()=>void maybePromptPush(),1800);
- async function registration(){await navigator.serviceWorker.register('./push-worker.js',{scope:'./'});return navigator.serviceWorker.ready}
+ function pushWait(promise,stage,ms=15000){return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{const error=new Error(stage+' 응답이 지연되고 있어요. 인터넷 연결을 확인한 뒤 다시 시도해주세요.');error.code='PUSH_TIMEOUT';reject(error)},ms);Promise.resolve(promise).then(value=>{clearTimeout(timer);resolve(value)},error=>{clearTimeout(timer);reject(error)})})}
+ function pushProgress(text){$n('notification-device').hidden=false;$n('notification-device').textContent=text}
+ async function registration(){await pushWait(navigator.serviceWorker.register('./push-worker.js',{scope:'./'}),'알림 기능 준비');return pushWait(navigator.serviceWorker.ready,'알림 기능 활성화')}
  async function updateSettings(){
  $n('notification-device').hidden=true;$n('notification-device').textContent='';
  if(preview){enabled=localStorage.getItem(key+'-enabled')==='true';$n('notification-setup').textContent='미리보기에서는 기기 알림 권한을 요청하지 않습니다.'}
@@ -131,7 +133,7 @@
  }
 
  async function changePush(){
- const b=$n('notification-toggle');b.disabled=true;let stage='permission';
+ const b=$n('notification-toggle');b.disabled=true;let stage='permission';pushProgress('기기 알림을 연결하고 있어요…');
  try{
  if(preview){localStorage.setItem(key+'-enabled',String(!enabled));await updateSettings();return}
  if(!connection())throw Error('가족 공유 연결을 확인해주세요.');
@@ -140,18 +142,18 @@
  if(!pushRegistration){pushRegistration=await registration();throw Error('알림 준비가 끝났어요. 앱 푸시를 한 번 더 눌러주세요.')}
  let sub;
  if(enabled){
- stage='save';sub=await pushRegistration.pushManager.getSubscription();if(sub){const {error}=await connection().client.from('family_push_subscriptions').delete().eq('endpoint',sub.endpoint);if(error)throw error;await sub.unsubscribe()}
+ stage='save';sub=await pushWait(pushRegistration.pushManager.getSubscription(),'기기 알림 확인');if(sub){const {error}=await connection().client.from('family_push_subscriptions').delete().eq('endpoint',sub.endpoint);if(error)throw error;await sub.unsubscribe()}
  }else{
  // Subscribe is the first async operation: iOS receives the original tap gesture.
  const bytes=Uint8Array.from(atob(publicKey.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));
- sub=await pushRegistration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytes});
- stage='save';const session=await connection().client.auth.getUser();if(session.error||!session.data.user)throw Error('가족 공유 연결을 확인해주세요.');
- const {error}=await connection().client.from('family_push_subscriptions').upsert({user_id:session.data.user.id,family_id:connection().familyId,endpoint:sub.endpoint,subscription:sub.toJSON(),preferences},{onConflict:'user_id,endpoint'});if(error)throw error;
+ sub=await pushWait(pushRegistration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytes}),'브라우저 푸시 등록',30000);
+ stage='save';pushProgress('알림을 받을 기기를 저장하고 있어요…');const session=await pushWait(connection().client.auth.getUser(),'가족 연결 확인');if(session.error||!session.data.user)throw Error('가족 공유 연결을 확인해주세요.');
+ const {error}=await pushWait(connection().client.from('family_push_subscriptions').upsert({user_id:session.data.user.id,family_id:connection().familyId,endpoint:sub.endpoint,subscription:sub.toJSON(),preferences},{onConflict:'user_id,endpoint'}),'수신 기기 저장');if(error)throw error;
  }
  await updateSettings();
  }catch(e){
  $n('notification-device').hidden=false;
- $n('notification-device').textContent=stage==='save'?'알림 권한은 허용됐지만 서버에 기기를 등록하지 못했어요. 다시 켜주세요. ('+(e.code||e.message||'연결 오류')+')':e.name==='NotAllowedError'?'알림 권한을 확인해주세요. 아이폰 설정 → 알림 → 후쿠오카 여행에서 알림 허용을 켠 뒤 앱을 다시 열어주세요.':e.message||'알림을 켜지 못했어요. 다시 시도해주세요.';
+ $n('notification-device').textContent=e.code==='PUSH_TIMEOUT'?e.message:stage==='save'?'알림 권한은 허용됐지만 서버에 기기를 등록하지 못했어요. 다시 켜주세요. ('+(e.code||e.message||'연결 오류')+')':e.name==='NotAllowedError'?(/iPhone|iPad/.test(navigator.userAgent)?'아이폰 설정 → 알림 → 후쿠오카 여행에서 알림 허용을 확인해주세요.':'Chrome 또는 사용 중인 브라우저의 사이트 설정 → 알림에서도 이 사이트가 허용됐는지 확인해주세요. 단말기 앱 알림과 별도 설정입니다.'):e.message||'알림을 켜지 못했어요. 다시 시도해주세요.';
  }finally{b.disabled=false}
  }
 
