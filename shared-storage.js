@@ -103,7 +103,7 @@
     seed.hidden=true;
     let pending=null;try{pending=JSON.parse(localStorage.getItem(OUTBOX));}catch(error){}
     // 다른 기기의 첫 접속은 기존 서버 기록을 우선합니다.
-    accept(row,pending?.owner===familyId?pending.base:null);ready=true;lock(false);window.FamilyConnection={client,familyId};window.dispatchEvent?.(new Event("family-connected"));
+    accept(row,pending?.owner===familyId?pending.base:null);ready=true;lock(false);window.FamilyConnection={client,familyId,async flush(){await sync();const until=Date.now()+15000;while(localStorage.getItem(OUTBOX)&&Date.now()<until){await new Promise(resolve=>setTimeout(resolve,200))}if(localStorage.getItem(OUTBOX))throw Error('일정 저장을 기다리고 있어요. 연결 확인 후 다시 시도해 주세요.')}};window.dispatchEvent?.(new Event("family-connected"));
     if(!currentProfileId)dialog.addEventListener('close',()=>openProfiles(),{once:true});
     if(channel)await client.removeChannel(channel);
     channel=client.channel('family-trip-'+familyId).on('postgres_changes',{event:'*',schema:'public',table:'family_trip',filter:'owner_id=eq.'+familyId},()=>void sync()).subscribe();

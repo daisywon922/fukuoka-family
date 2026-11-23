@@ -1,0 +1,6 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const code=fs.readFileSync(require.resolve('../booking-attachments.js'),'utf8');
+let loaded,opened=false,closed=false,destination=null;
+const context=vm.createContext({window:{open(){opened=true;return{opener:{},location:{replace(url){destination=url}},close(){closed=true}}}},blob:()=>new Promise(resolve=>loaded=resolve),URL:{createObjectURL:()=> 'blob:test',revokeObjectURL(){}},setTimeout(){}});
+vm.runInContext(code.slice(code.indexOf(' function temporaryURL'),code.indexOf(' function tools('))+';globalThis.openFile=open',context);
+(async()=>{const result=context.openFile({});assert.equal(opened,true);assert.equal(destination,null);loaded({});await result;assert.equal(destination,'blob:test');context.blob=async()=>{throw Error('offline')};await assert.rejects(()=>context.openFile({}),/offline/);assert.equal(closed,true);context.window.open=()=>null;await assert.rejects(()=>context.openFile({}),/파일 작업/);assert.equal(code.includes("node('dialog','attachment-preview')"),false);console.log('Gesture-preserving browser file opening, failure cleanup, blocked popup fallback, and no preview modal passed')})().catch(e=>{console.error(e);process.exitCode=1});

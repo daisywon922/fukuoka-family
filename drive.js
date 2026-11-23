@@ -1,0 +1,27 @@
+/* 예약 첨부와 같은 파일 저장소를 사용하되 독립된 항목으로 관리합니다. */
+(()=>{
+ const preview=typeof LOCAL_PREVIEW!=='undefined'&&LOCAL_PREVIEW,files=window.BookingAttachments;
+ const node=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text)n.textContent=text;return n};
+ const style=node('style');style.textContent='#drive-list{padding:0 12px}#drive-list .attachment-row{padding:10px 0;gap:3px}#drive-list .attachment-file-icon{width:32px;height:36px}#drive-list .attachment-open{gap:8px}#drive-list .attachment-trash{min-width:30px;padding:6px}#drive-list .inline{min-width:30px;padding:5px 3px;font-size:11px}#drive-list .attachment-info strong{font-size:13px}';document.head.append(style);
+ const list=document.getElementById('drive-list'),status=document.getElementById('drive-status'),section=document.getElementById('drive');
+ let rows=[];const search=node('input');search.type='search';search.placeholder='항목명 검색';search.setAttribute('aria-label','드라이브 항목명 검색');search.maxLength=100;search.style.margin='0 0 12px';list.before(search);search.oninput=render;
+ if(preview)document.getElementById('drive-help').textContent='미리보기 · 이 브라우저에만 저장됩니다.';
+ const editor=node('dialog','attachment-confirm');editor.setAttribute('aria-label','드라이브 파일 추가');editor.innerHTML='<div class="titleline"><h2 id="drive-editor-title">파일 추가</h2><button type="button" class="close-icon" aria-label="드라이브 파일 창 닫기">×</button></div><form id="drive-form"><div class="formgrid"><label class="field full">항목명<input id="drive-title" maxlength="100" required placeholder="예: 호텔 예약 바우처"></label><div class="full" id="drive-file-field"><span class="field" style="font-size:12px">파일 <span style="color:#bf4545;font-size:14px;font-weight:700">*</span></span><button type="button" id="drive-pick" style="width:100%;margin-top:5px;text-align:left;overflow-wrap:anywhere">사진 또는 PDF 선택</button><input id="drive-file" type="file" accept=".jpg,.jpeg,.png,.heic,.heif,.pdf" hidden><p class="help">사진·PDF · 파일당 최대 10MB</p></div></div><p class="attachment-message error" id="drive-error" role="alert"></p><div class="actions"><button type="button" id="drive-cancel">취소</button><button class="primary" id="drive-save" disabled>저장</button></div></form>';document.body.append(editor);
+ const $d=id=>document.getElementById(id);let editing=null,picked=null,busy=false,refreshId=0;
+ const canSave=()=>{const title=$d('drive-title').value.trim();return title.length>0&&title.length<=100&&(editing?title!==editing.title:!!picked)};
+ function valid(){ $d('drive-save').disabled=busy||!canSave() }
+ function close(){if(!busy)editor.close()}
+ editor.querySelector('.close-icon').onclick=close;$d('drive-cancel').onclick=close;editor.addEventListener('cancel',e=>{if(busy)e.preventDefault()});
+ $d('drive-title').oninput=valid;$d('drive-pick').onclick=()=>$d('drive-file').click();
+ $d('drive-file').onchange=e=>{picked=e.target.files[0]||null;if(picked){$d('drive-pick').textContent=picked.name;if(!$d('drive-title').value.trim())$d('drive-title').value=picked.name.replace(/\.[^.]+$/,'').slice(0,100)}valid()};
+ function open(row=null){editing=row;picked=null;$d('drive-form').reset();$d('drive-error').textContent='';$d('drive-title').value=row?.title||'';$d('drive-editor-title').textContent=row?'항목명 수정':'파일 추가';editor.setAttribute('aria-label',row?'드라이브 항목명 수정':'드라이브 파일 추가');$d('drive-file-field').hidden=!!row;$d('drive-pick').textContent='사진 또는 PDF 선택';valid();editor.showModal()}
+ function render(){const query=search.value.trim().normalize('NFC').toLocaleLowerCase('ko-KR'),matches=rows.filter(row=>(row.title||row.filename).normalize('NFC').toLocaleLowerCase('ko-KR').includes(query));list.replaceChildren();if(!matches.length)list.append(node('p','empty',query?'검색 결과가 없습니다.':'아직 저장한 파일이 없습니다.'));for(const row of matches)list.append(files.renderRow(row,refresh,status))}
+ async function refresh(){const id=++refreshId;try{const result=await files.list('drive');if(id!==refreshId)return;rows=result;render();status.textContent=''}catch(e){status.textContent=e.message}}
+ $d('drive-add').onclick=()=>open();
+ $d('drive-form').onsubmit=async e=>{e.preventDefault();if(busy||!canSave())return;busy=true;valid();$d('drive-cancel').disabled=true;$d('drive-pick').disabled=true;$d('drive-title').disabled=true;editor.querySelector('.close-icon').disabled=true;$d('drive-error').textContent=editing?'이름을 수정하고 있어요…':'파일을 올리고 있어요…';try{if(editing)await files.rename(editing,$d('drive-title').value.trim());else await files.add('drive',picked,$d('drive-title').value.trim());editor.close();toast(editing?'항목명을 수정했어요.':'파일을 저장했어요.');await refresh()}catch(error){$d('drive-error').textContent=error.message}finally{busy=false;$d('drive-cancel').disabled=false;$d('drive-pick').disabled=false;$d('drive-title').disabled=false;editor.querySelector('.close-icon').disabled=false;valid()}};
+ document.querySelector('[data-go="drive"]').addEventListener('click',refresh);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!section.hidden)void refresh()});
+ let channel;function subscribe(){const c=window.FamilyConnection;if(!c)return;if(channel)c.client.removeChannel(channel);channel=c.client.channel('drive-files').on('postgres_changes',{event:'*',schema:'public',table:'booking_attachments',filter:'family_id=eq.'+c.familyId},()=>{if(!section.hidden)void refresh()}).subscribe();if(!section.hidden)void refresh()}
+ window.addEventListener('family-connected',subscribe);if(window.FamilyConnection)subscribe();
+ window.DriveFiles={edit:open};
+})();

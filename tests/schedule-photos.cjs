@@ -1,0 +1,10 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const html=fs.readFileSync(require.resolve('../index.html'),'utf8'),code=fs.readFileSync(require.resolve('../schedule-photos.js'),'utf8');
+const line=html.split('\n').find(x=>x.startsWith('function validSchedulePatch('));
+const c=vm.createContext({TRIP:{days:[{date:'2027-03-10'}]}});vm.runInContext(line,c);
+const event={id:'event-a',title:'공원',time:'15:00',activity:'',notes:''},check=photoIds=>c.validSchedulePatch({date:'2027-03-10',event:{...event,photoIds}},event.id);
+assert.equal(check(undefined),true);assert.equal(check(['11111111-1111-4111-8111-111111111111']),true);
+assert.equal(check(['11111111-1111-4111-8111-111111111111','11111111-1111-4111-8111-111111111111']),false);
+assert.equal(check(['not-a-file']),false);assert.equal(check(Array.from({length:6},(_,i)=>`${i}1111111-1111-4111-8111-111111111111`)),false);
+new vm.Script(code);new vm.Script(fs.readFileSync(require.resolve('../drive.js'),'utf8'));
+console.log('Schedule photo order compatibility, unique IDs, five-photo limit and module syntax passed');
