@@ -1,0 +1,14 @@
+const assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs');
+const drive=fs.readFileSync(require.resolve('../drive.js'),'utf8');
+const c=vm.createContext({});vm.runInContext(drive.slice(0,drive.indexOf('\n/*')),c);
+const rows=[{id:'a',title:'티켓 10',category:'항공',created_at:'2026-11-22'},{id:'b',title:'티켓 2',category:'관광',created_at:'2026-11-23'},{id:'c',title:'호텔 바우처',created_at:'2026-11-21'}];
+const ids=(query,cat,asc)=>Array.from(c.filterDriveFiles(rows,query,cat,asc),r=>r.id);
+assert.deepEqual(ids('','전체',false),['b','a','c']);
+assert.deepEqual(ids('','전체',true),['c','a','b']);
+assert.deepEqual(ids(' 티켓 ','항공',true),['a']);
+assert.deepEqual(ids('','기타',true),['c']);
+assert.equal(rows[0].id,'a');
+const attachments=fs.readFileSync(require.resolve('../booking-attachments.js'),'utf8');let stored={id:'a',filename:'original.pdf',title:'항공권',booking_id:'drive',blob:'original',created_at:'2026-11-01'};
+const context=vm.createContext({preview:true,local:async(mode,action)=>action({get:()=>stored,put:row=>{stored=row}}),prepare:async f=>{if(f.bad)throw Error('invalid');return{name:'new.pdf',type:'application/pdf',blob:'new',...f}},Error});
+vm.runInContext(attachments.slice(attachments.indexOf(' async function updateDrive'),attachments.indexOf(' window.BookingAttachments='))+';globalThis.update=updateDrive',context);
+(async()=>{await context.update(stored,{title:'새 이름',category:'항공',file:null});assert.equal(stored.blob,'original');await assert.rejects(()=>context.update(stored,{title:'새 이름',category:'항공',file:{bad:true}}),/invalid/);assert.equal(stored.blob,'original');await context.update(stored,{title:'교체',category:'항공',file:{}});assert.equal(stored.blob,'new');assert.equal(stored.id,'a');assert.equal(stored.created_at,'2026-11-01');console.log('Drive categories, search and registration sort directions; file replacement failure preservation and stable registration passed')})().catch(e=>{console.error(e);process.exitCode=1});
